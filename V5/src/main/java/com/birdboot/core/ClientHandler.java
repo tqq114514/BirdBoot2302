@@ -35,11 +35,12 @@ public class ClientHandler implements Runnable {
             System.out.println("请求的uri是："+uri);
             String method = request.getMethod();
             System.out.println("请求方式是："+method);
+            String protocol = request.getProtocol();
+            System.out.println("协议类型为："+protocol);
+
 
             //2处理请求
 
-
-            //3发送响应
             /*v5新增
             * 将首页包含在响应中*/
             /*实际开发中的相对路径：类加载路径*/
@@ -50,40 +51,59 @@ public class ClientHandler implements Runnable {
             /*根据类加载路径定位其中的static目录*/
             File staticDir = new File(baseDir,"static");
             /*根据static目录定位其中的index,html目录*/
-            File file = new File(staticDir,"index.html");
+            File file = new File(staticDir,uri);
 
-               /*
+            /*如果请求页面不存在，则返回404*/
+            int statusCode;  //状态码
+            String statusReason;  //状态描述
+            if(file.isFile()) {
+                statusCode = 200;
+                statusReason = "OK";
+            }else {
+                statusCode = 404;
+                statusReason = "NotFound";
+                file = new File(staticDir,"404.html");
+            }
+                 /*
                 将页面包含在响应中发送给浏览器
                 HTTP/1.1 200 OK(CRLF)
                 Content-Type: text/html(CRLF)
                 Content-Length: 2546(CRLF)(CRLF)
                 1011101010101010101......
              */
-            OutputStream out = socket.getOutputStream();
-            /*1、发送状态行*/
-            String line = "HTTP/1.1 200 OK";
+
+                //3发送响应
+
+                /*1、发送状态行*/
+            /*String line = "HTTP/1.1 200 OK";
             out.write(line.getBytes(StandardCharsets.ISO_8859_1));
             out.write(13);
-            out.write(10);
-            /*2、发送响应头*/
-            line = "Content-Type: text/html";
+            out.write(10);*/
+                println("HTTP/1.1 "+statusCode+" "+statusReason);
+                /*2、发送响应头*/
+           /* line = "Content-Type: text/html";
             out.write(line.getBytes(StandardCharsets.ISO_8859_1));
             out.write(13);
-            out.write(10);
-            line = " Content-Length: "+file.length();
+            out.write(10);*/
+                println("Content-Type: text/html");
+           /* line = "Content-Length: "+file.length();
             out.write(line.getBytes(StandardCharsets.ISO_8859_1));
             out.write(13);
-            out.write(10);
-            /*单独发送回车换行表示响应头发完了*/
-            out.write(13);
-            out.write(10);
-            /*发送响应正文,将index.html页面发送出去*/
-            FileInputStream fis = new FileInputStream(file);
-            byte[] data = new byte[1024*10];
-            int len;
-            while((len=fis.read(data))!=-1){
-                out.write(data,0,len);
-            }
+            out.write(10);*/
+                println("Content-Length: "+file.length());
+                /*单独发送回车换行表示响应头发完了*/
+            /*out.write(13);
+            out.write(10);*/
+                println("");
+
+                /*发送响应正文,将index.html页面发送出去*/
+                OutputStream out = socket.getOutputStream();
+                FileInputStream fis = new FileInputStream(file);
+                byte[] data = new byte[1024*10];
+                int len;
+                while((len=fis.read(data))!=-1){
+                    out.write(data,0,len);
+                }
 
         } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
@@ -95,6 +115,14 @@ public class ClientHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+    /*发送响应时，状态行和响应头发送一行字符串的代码是一致的，因此单独独立建立方法进行处理*/
+    private void println(String line) throws IOException {
+        OutputStream out = socket.getOutputStream();
+        /*1、发送状态行*/
+        out.write(line.getBytes(StandardCharsets.ISO_8859_1));
+        out.write(13);
+        out.write(10);
     }
 }
 
